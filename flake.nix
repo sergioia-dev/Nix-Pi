@@ -1,5 +1,5 @@
 {
-  description = "Pi agent with declarative configuration";
+  description = "Pi agent with declarative configuration (fully isolated)";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
@@ -21,62 +21,49 @@
           pkgs = nixpkgs.legacyPackages.${system};
           basePi = pkgs.pi-coding-agent;
 
-          # ------------------------------------------------------------
-          # 1. DECLARE YOUR SETTINGS
-          # ------------------------------------------------------------
+          extensionSpecs = [
+            "npm:opencode-pi"
+            "npm:pi-vim"
+            "npm:pi-nvim"
+            "npm:pi-cc-theme"
+            "npm:pi-catppuccin-tui"
+          ];
+
           settingsJson = pkgs.writeText "settings.json" (
             builtins.toJSON {
-              # Model & Thinking[reference:4]
               defaultProvider = "anthropic";
               defaultModel = "claude-sonnet-4-20250514";
               defaultThinkingLevel = "medium";
               hideThinkingBlock = false;
-
-              # UI & Display[reference:5]
               theme = "dark";
               quietStartup = false;
               defaultProjectTrust = "ask";
-
-              # Compaction[reference:6]
               compaction = {
                 enabled = true;
                 reserveTokens = 16384;
                 keepRecentTokens = 20000;
               };
-
-              # Retry[reference:7]
               retry = {
                 enabled = true;
                 maxRetries = 3;
                 baseDelayMs = 2000;
               };
-
-              # Model Cycling[reference:8]
               enabledModels = [
-                "claude-*"
+                "claude-sonnet-4-20250514"
                 "gpt-4o"
               ];
-
-              # Warnings[reference:9]
               warnings = {
                 anthropicExtraUsage = true;
               };
-
-              # Packages (extensions to load)[reference:10]
-              packages = [
-                "npm:@vigolium/piolium"
-              ];
+              packages = extensionSpecs;
             }
           );
 
-          # ------------------------------------------------------------
-          # 2. DECLARE MODELS (providers)
-          # ------------------------------------------------------------
           modelsJson = pkgs.writeText "models.json" (
             builtins.toJSON {
               providers = {
                 anthropic = {
-                  apiKey = "$ANTHROPIC_API_KEY"; # read from environment
+                  apiKey = "$ANTHROPIC_API_KEY";
                 };
                 openai = {
                   apiKey = "$OPENAI_API_KEY";
@@ -102,9 +89,6 @@
             }
           );
 
-          # ------------------------------------------------------------
-          # 3. DECLARE KEYBINDINGS
-          # ------------------------------------------------------------
           keybindingsJson = pkgs.writeText "keybindings.json" (
             builtins.toJSON {
               "mode:main:key:ctrl-p" = [ "goto:chat" ];
@@ -113,24 +97,41 @@
             }
           );
 
-          # ------------------------------------------------------------
-          # 4. RUNTIME EXTENSION INSTALLER (avoids sandbox issues)
-          # ------------------------------------------------------------
-          extensionSpecs = [
-            "npm:opencode-pi"
-            "npm:pi-vim"
-            "npm:pi-nvim"
-            "npm:pi-cc-theme"
-            "npm:pi-catppuccin-tui"
-          ];
+          configDir = pkgs.runCommand "pi-config" { } ''
+            mkdir -p $out
+            ln -s ${settingsJson} $out/settings.json
+            ln -s ${modelsJson} $out/models.json
+            ln -s ${keybindingsJson} $out/keybindings.json
+          '';
 
           piWrapper = pkgs.writeShellScriptBin "pi" ''
             set -e
 
-            PI_HOME="$HOME/.pi"
-            PI_NPM_DIR="$PI_HOME/agent/npm"
+            PI_PARENT="$HOME/.local/share/pi-nix"
+            PI_AGENT_DIR="$PI_PARENT/agent"
+            export PI_CODING_AGENT_DIR="$PI_AGENT_DIR"
+            export PI_HOME="$PI_AGENT_DIR"
 
-            # Install extensions if missing
+            mkdir -p "$PI_AGENT_DIR"
+
+            # Ensure ~/.pi symlink points to parent
+            if ! test -L "$HOME/.pi" || test "$(readlink "$HOME/.pi")" != "$PI_PARENT"; then
+              if test -e "$HOME/.pi"; then
+                mv "$HOME/.pi" "$HOME/.pi.bak.$(date +%s)"
+              fi
+              ln -s "$PI_PARENT" "$HOME/.pi"
+            fi
+
+            # ---- Overwrite config files safely ----
+            for file in settings.json models.json keybindings.json; do
+              rm -f "$PI_AGENT_DIR/$file"              # remove if exists
+              cp ${configDir}/$file "$PI_AGENT_DIR/"   # copy fresh from store
+              chmod 644 "$PI_AGENT_DIR/$file"          # make writable
+            done
+
+            # ---- Install missing extensions ----
+            PI_NPM_DIR="$PI_AGENT_DIR/npm"
+            mkdir -p "$PI_NPM_DIR"
             for spec in ${pkgs.lib.concatStringsSep " " extensionSpecs}; do
               pkg=''${spec#npm:}
               name=''${pkg%%@*}
@@ -140,46 +141,26 @@
               fi
             done
 
-            # Run the real pi with all arguments
             exec ${basePi}/bin/pi "$@"
           '';
 
-          # ------------------------------------------------------------
-          # 5. WRAP THE BINARY WITH CONFIG FILES
-          # ------------------------------------------------------------
-          piWithConfig = pkgs.symlinkJoin {
-            name = "pi-coding-agent-configured";
+          piWithIsolation = pkgs.symlinkJoin {
+            name = "pi-isolated";
             paths = [ basePi ];
 
             buildInputs = [ pkgs.makeWrapper ];
 
             postBuild = ''
-              # Create config directory inside the package
-              mkdir -p $out/share/pi/agent
-
-              # Link the generated config files
-              ln -s ${settingsJson} $out/share/pi/agent/settings.json
-              ln -s ${modelsJson} $out/share/pi/agent/models.json
-              ln -s ${keybindingsJson} $out/share/pi/agent/keybindings.json
-
-              # Override the pi binary with our wrapper
               ln -sf ${piWrapper}/bin/pi $out/bin/pi
-
-              # Wrap the original binary (for when the wrapper calls it)
               wrapProgram $out/bin/pi \
-                --set PI_CONFIG_DIR "$out/share/pi/agent" \
-                --prefix PATH : ${
-                  pkgs.lib.makeBinPath [
-                    pkgs.nodejs_latest
-                  ]
-                } \
+                --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.nodejs_latest ]} \
                 --set PI_SKIP_VERSION_CHECK 1
             '';
           };
 
         in
         {
-          pi = piWithConfig;
+          pi = piWithIsolation;
         }
       );
 
