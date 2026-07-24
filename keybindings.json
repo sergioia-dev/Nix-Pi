@@ -1,0 +1,5 @@
+{
+  "mode:main:key:ctrl-p": ["goto:chat"],
+  "mode:chat:key:escape": ["goto:main"],
+  "mode:main:key:ctrl-k": ["kill:buffer"]
+}

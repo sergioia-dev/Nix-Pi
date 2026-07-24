@@ -27,75 +27,31 @@
             "npm:pi-nvim"
             "npm:pi-cc-theme"
             "npm:pi-catppuccin-tui"
+            "npm:pi-plan-mode@0.4.8"
+            "npm:pi-web-access@0.13.0"
+            "npm:@juicesharp/rpiv-todo@2.1.0"
+            "npm:pi-protected-paths@0.1.1"
           ];
 
           settingsJson = pkgs.writeText "settings.json" (
             builtins.toJSON {
-              defaultProvider = "anthropic";
-              defaultModel = "claude-sonnet-4-20250514";
-              defaultThinkingLevel = "medium";
               hideThinkingBlock = false;
-              theme = "dark";
+              theme = "catppuccin-tui-mocha";
               quietStartup = false;
               defaultProjectTrust = "ask";
-              compaction = {
-                enabled = true;
-                reserveTokens = 16384;
-                keepRecentTokens = 20000;
-              };
               retry = {
-                enabled = true;
-                maxRetries = 3;
-                baseDelayMs = 2000;
+                "enabled" = true;
+                "maxRetries" = 3;
+                "baseDelayMs" = 2000;
               };
-              enabledModels = [
-                "claude-sonnet-4-20250514"
-                "gpt-4o"
-              ];
-              warnings = {
-                anthropicExtraUsage = true;
-              };
+
               packages = extensionSpecs;
             }
           );
 
-          modelsJson = pkgs.writeText "models.json" (
-            builtins.toJSON {
-              providers = {
-                anthropic = {
-                  apiKey = "$ANTHROPIC_API_KEY";
-                };
-                openai = {
-                  apiKey = "$OPENAI_API_KEY";
-                };
-                ollama = {
-                  baseUrl = "http://127.0.0.1:11434";
-                };
-              };
-              models = {
-                "claude-sonnet-4-20250514" = {
-                  provider = "anthropic";
-                  model = "claude-3-5-sonnet-20241022";
-                };
-                "gpt-4o" = {
-                  provider = "openai";
-                  model = "gpt-4o";
-                };
-                "codellama" = {
-                  provider = "ollama";
-                  model = "codellama";
-                };
-              };
-            }
-          );
+          modelsJson = pkgs.writeText "models.json" (builtins.readFile ./models.json);
 
-          keybindingsJson = pkgs.writeText "keybindings.json" (
-            builtins.toJSON {
-              "mode:main:key:ctrl-p" = [ "goto:chat" ];
-              "mode:chat:key:escape" = [ "goto:main" ];
-              "mode:main:key:ctrl-k" = [ "kill:buffer" ];
-            }
-          );
+          keybindingsJson = pkgs.writeText "keybindings.json" (builtins.readFile ./keybindings.json);
 
           configDir = pkgs.runCommand "pi-config" { } ''
             mkdir -p $out

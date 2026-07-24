@@ -1,0 +1,25 @@
+{
+  "providers": {
+    "openrouter": {
+      "apiKey": "$OPENROUTER_API_KEY"
+    }
+  },
+  "models": {
+    "openrouter/google/gemini-2.0-flash-exp:free": {
+      "provider": "openrouter",
+      "model": "google/gemini-2.0-flash-exp:free"
+    },
+    "openrouter/meta-llama/llama-3.3-70b-instruct:free": {
+      "provider": "openrouter",
+      "model": "meta-llama/llama-3.3-70b-instruct:free"
+    },
+    "openrouter/microsoft/phi-4:free": {
+      "provider": "openrouter",
+      "model": "microsoft/phi-4:free"
+    },
+    "openrouter/qwen/qwen-2.5-72b-instruct:free": {
+      "provider": "openrouter",
+      "model": "qwen/qwen-2.5-72b-instruct:free"
+    }
+  }
+}
