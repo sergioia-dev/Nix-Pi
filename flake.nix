@@ -27,14 +27,16 @@
             "npm:pi-nvim@0.2.4"
             "npm:pi-pixel-header@1.0.2"
             "npm:@sherif-fanous/pi-catppuccin@0.2.0"
-            "npm:pi-plan-mode@0.4.8"
+            "git:github.com/bwks/pi-planner"
             "npm:pi-web-access@0.13.0"
             "npm:@juicesharp/rpiv-todo@2.1.0"
             "npm:pi-protected-paths@0.1.1"
             "npm:pi-loop-police@1.13.0"
             "npm:pi-adaptive-thinking@0.1.1"
-            "npm:pi-subagents@0.36.0"
+            "npm:pi-open-agents@0.1.12"
+            "npm:@tmustier/pi-usage-extension"
             "npm:@firstpick/pi-extension-nixos-wiki-local@0.1.6"
+            "npm:pi-env-probe"
           ];
 
           settingsJson = pkgs.writeText "settings.json" (
@@ -43,10 +45,22 @@
               theme = "catppuccin-mocha";
               quietStartup = false;
               defaultProjectTrust = "ask";
+              editorPaddingX = 3;
               retry = {
                 "enabled" = true;
                 "maxRetries" = 3;
                 "baseDelayMs" = 2000;
+                "provider" = {
+                  "timeoutMs" = 3600000;
+                  "maxRetries" = 1;
+                  "maxRetryDelayMs" = 60000;
+                };
+              };
+              thinkingBudgets = {
+                "minimal" = 1024;
+                "low" = 4096;
+                "medium" = 10240;
+                "high" = 32768;
               };
 
               packages = extensionSpecs;
