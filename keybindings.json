@@ -1,5 +1,6 @@
 {
-  "mode:main:key:ctrl-p": ["goto:chat"],
-  "mode:chat:key:escape": ["goto:main"],
-  "mode:main:key:ctrl-k": ["kill:buffer"]
+  "tui.select.up": ["up", "ctrl+p"],
+  "tui.select.down": ["down", "ctrl+n"],
+  "app.model.cycleForward": [],
+  "app.model.cycleBackward": []
 }

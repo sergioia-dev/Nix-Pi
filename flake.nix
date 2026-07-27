@@ -22,21 +22,25 @@
           basePi = pkgs.pi-coding-agent;
 
           extensionSpecs = [
-            "npm:opencode-pi"
-            "npm:pi-vim"
-            "npm:pi-nvim"
-            "npm:pi-cc-theme"
-            "npm:pi-catppuccin-tui"
+            "npm:opencode-pi@1.1.2"
+            "npm:pi-vim@0.14.1"
+            "npm:pi-nvim@0.2.4"
+            "npm:pi-pixel-header@1.0.2"
+            "npm:@sherif-fanous/pi-catppuccin@0.2.0"
             "npm:pi-plan-mode@0.4.8"
             "npm:pi-web-access@0.13.0"
             "npm:@juicesharp/rpiv-todo@2.1.0"
             "npm:pi-protected-paths@0.1.1"
+            "npm:pi-loop-police@1.13.0"
+            "npm:pi-adaptive-thinking@0.1.1"
+            "npm:pi-subagents@0.36.0"
+            "npm:@firstpick/pi-extension-nixos-wiki-local@0.1.6"
           ];
 
           settingsJson = pkgs.writeText "settings.json" (
             builtins.toJSON {
               hideThinkingBlock = false;
-              theme = "catppuccin-tui-mocha";
+              theme = "catppuccin-mocha";
               quietStartup = false;
               defaultProjectTrust = "ask";
               retry = {
