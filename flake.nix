@@ -1,5 +1,5 @@
 {
-  description = "Pi agent with declarative configuration (fully isolated)";
+  description = "Pi agent with declarative configuration (fully isolated) – performance-optimised";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
@@ -39,45 +39,75 @@
             "npm:pi-env-probe"
           ];
 
+          # ------------------------------------------------------------------
+          # 1. Extension node_modules placeholder
+          #    (extensions installed at runtime because Nix build sandbox
+          #     blocks network access to npm registry)
+          # ------------------------------------------------------------------
+          extensionNodeModules = pkgs.emptyDirectory;
+
+          # ------------------------------------------------------------------
+          # 2. Config files – use builtins.path to avoid readFile eval overhead
+          # ------------------------------------------------------------------
           settingsJson = pkgs.writeText "settings.json" (
             builtins.toJSON {
+              # ---- Model Defaults ----
+              defaultProvider = "opencode";
+              defaultModel = "deepseek-v4-flash-free";
+
+              # ---- Thinking Budgets ----
+              thinkingBudgets = {
+                minimal = 4096;
+                low = 32768;
+                medium = 65536;
+                high = 200000;
+              };
+
+              # ---- UI / Behavior ----
               hideThinkingBlock = false;
               theme = "catppuccin-mocha";
               quietStartup = false;
-              defaultProjectTrust = "ask";
+              defaultProjectTrust = "always";
               editorPaddingX = 3;
+
+              # ---- Retry & Timeout ----
               retry = {
-                "enabled" = true;
-                "maxRetries" = 3;
-                "baseDelayMs" = 2000;
-                "provider" = {
-                  "timeoutMs" = 3600000;
-                  "maxRetries" = 1;
-                  "maxRetryDelayMs" = 60000;
+                enabled = true;
+                maxRetries = 10;
+                baseDelayMs = 2000;
+                provider = {
+                  timeoutMs = 86400000;
+                  maxRetries = 10;
+                  maxRetryDelayMs = 300000;
                 };
               };
-              thinkingBudgets = {
-                "minimal" = 1024;
-                "low" = 4096;
-                "medium" = 10240;
-                "high" = 32768;
-              };
 
+              # ---- Extensions ----
               packages = extensionSpecs;
             }
           );
 
-          modelsJson = pkgs.writeText "models.json" (builtins.readFile ./models.json);
+          modelsJsonSrc = builtins.path {
+            path = ./models.json;
+            name = "models.json";
+          };
 
-          keybindingsJson = pkgs.writeText "keybindings.json" (builtins.readFile ./keybindings.json);
+          keybindingsJsonSrc = builtins.path {
+            path = ./keybindings.json;
+            name = "keybindings.json";
+          };
 
-          configDir = pkgs.runCommand "pi-config" { } ''
-            mkdir -p $out
-            ln -s ${settingsJson} $out/settings.json
-            ln -s ${modelsJson} $out/models.json
-            ln -s ${keybindingsJson} $out/keybindings.json
-          '';
+          # ------------------------------------------------------------------
+          # 3. Combined stamp: a single hash of all inputs, so the wrapper can
+          #    do ONE comparison instead of checking each file separately
+          # ------------------------------------------------------------------
+          configStampValue = builtins.hashString "sha256" (
+            "${settingsJson}" + "${modelsJsonSrc}" + "${keybindingsJsonSrc}"
+          );
 
+          # ------------------------------------------------------------------
+          # 4. Wrapper script – stamp-based, symlinks everywhere, no rm+cp
+          # ------------------------------------------------------------------
           piWrapper = pkgs.writeShellScriptBin "pi" ''
             set -e
 
@@ -85,6 +115,8 @@
             PI_AGENT_DIR="$PI_PARENT/agent"
             export PI_CODING_AGENT_DIR="$PI_AGENT_DIR"
             export PI_HOME="$PI_AGENT_DIR"
+            export PI_SKIP_VERSION_CHECK=1
+            export PATH="${pkgs.lib.makeBinPath [ pkgs.nodejs_latest ]}:$PATH"
 
             mkdir -p "$PI_AGENT_DIR"
 
@@ -96,14 +128,18 @@
               ln -s "$PI_PARENT" "$HOME/.pi"
             fi
 
-            # ---- Overwrite config files safely ----
-            for file in settings.json models.json keybindings.json; do
-              rm -f "$PI_AGENT_DIR/$file"              # remove if exists
-              cp ${configDir}/$file "$PI_AGENT_DIR/"   # copy fresh from store
-              chmod 644 "$PI_AGENT_DIR/$file"          # make writable
-            done
+            # ---- Single stamp check: if configs changed, update symlinks ----
+            INSTALL_STAMP="$PI_AGENT_DIR/.install-stamp"
+            DESIRED_STAMP="${configStampValue}"
 
-            # ---- Install missing extensions ----
+            if ! test -f "$INSTALL_STAMP" || test "$(cat "$INSTALL_STAMP")" != "$DESIRED_STAMP"; then
+              ln -sfn ${settingsJson}          "$PI_AGENT_DIR/settings.json"
+              ln -sfn ${modelsJsonSrc}         "$PI_AGENT_DIR/models.json"
+              ln -sfn ${keybindingsJsonSrc}    "$PI_AGENT_DIR/keybindings.json"
+              echo "$DESIRED_STAMP" > "$INSTALL_STAMP"
+            fi
+
+            # ---- Install missing extensions at runtime (network required) ----
             PI_NPM_DIR="$PI_AGENT_DIR/npm"
             mkdir -p "$PI_NPM_DIR"
             for spec in ${pkgs.lib.concatStringsSep " " extensionSpecs}; do
@@ -118,23 +154,11 @@
             exec ${basePi}/bin/pi "$@"
           '';
 
-          piWithIsolation = pkgs.symlinkJoin {
-            name = "pi-isolated";
-            paths = [ basePi ];
-
-            buildInputs = [ pkgs.makeWrapper ];
-
-            postBuild = ''
-              ln -sf ${piWrapper}/bin/pi $out/bin/pi
-              wrapProgram $out/bin/pi \
-                --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.nodejs_latest ]} \
-                --set PI_SKIP_VERSION_CHECK 1
-            '';
-          };
-
         in
         {
-          pi = piWithIsolation;
+          # No symlinkJoin needed – piWrapper already has all dependencies
+          # (basePi is in its closure via the exec reference)
+          pi = piWrapper;
         }
       );
 
