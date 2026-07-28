@@ -2,7 +2,7 @@
   description = "Nix-Pi — Declarative Pi Coding Agent flake (fully isolated, reproducible)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
