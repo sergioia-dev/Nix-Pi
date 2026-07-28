@@ -1,99 +1,101 @@
-{ system, pkgs
+{
+  system,
+  pkgs,
 
-# ==================================================================
-# All tunable settings from flake.nix — each has a documented default
-# matching the pi upstream default.
-# ==================================================================
+  # ==================================================================
+  # All tunable settings from flake.nix — each has a documented default
+  # matching the pi upstream default.
+  # ==================================================================
 
-# --- Model & Thinking ---
-, defaultProvider            ? "opencode"
-, defaultModel               ? "deepseek-v4-flash-free"
-, defaultThinkingLevel       ? null          # null = pi default ("off")
-, hideThinkingBlock          ? false
-, showCacheMissNotices       ? false
-, thinkingBudgets            ? null          # null = pi default levels
+  # --- Model & Thinking ---
+  defaultProvider ? "opencode",
+  defaultModel ? "deepseek-v4-flash-free",
+  defaultThinkingLevel ? null, # null = pi default ("off")
+  hideThinkingBlock ? false,
+  showCacheMissNotices ? false,
+  thinkingBudgets ? null, # null = pi default levels
 
-# --- UI & Display ---
-, theme                      ? "catppuccin-mocha"
-, externalEditor             ? null          # null = pi default ($VISUAL/$EDITOR/nano)
-, quietStartup               ? false
-, defaultProjectTrust        ? "always"
-, collapseChangelog          ? false
-, enableInstallTelemetry     ? true
-, enableAnalytics            ? false
-, trackingId                 ? null
-, doubleEscapeAction         ? "tree"       # "tree", "fork", or "none"
-, treeFilterMode             ? "default"    # "default", "no-tools", "user-only", "labeled-only", "all"
-, editorPaddingX             ? 0
-, outputPad                  ? 1
-, autocompleteMaxVisible     ? 5
-, showHardwareCursor         ? false
+  # --- UI & Display ---
+  theme ? "catppuccin-mocha",
+  externalEditor ? null, # null = pi default ($VISUAL/$EDITOR/nano)
+  quietStartup ? false,
+  defaultProjectTrust ? "always",
+  collapseChangelog ? false,
+  enableInstallTelemetry ? true,
+  enableAnalytics ? false,
+  trackingId ? null,
+  doubleEscapeAction ? "tree", # "tree", "fork", or "none"
+  treeFilterMode ? "default", # "default", "no-tools", "user-only", "labeled-only", "all"
+  editorPaddingX ? 0,
+  outputPad ? 1,
+  autocompleteMaxVisible ? 5,
+  showHardwareCursor ? false,
 
-# --- Network ---
-, httpProxy                  ? null          # null = no proxy
+  # --- Network ---
+  httpProxy ? null, # null = no proxy
 
-# --- Warnings ---
-, warningsAnthropicExtraUsage ? true
+  # --- Warnings ---
+  warningsAnthropicExtraUsage ? true,
 
-# --- Compaction ---
-, compactionEnabled           ? true
-, compactionReserveTokens     ? 16384
-, compactionKeepRecentTokens  ? 20000
+  # --- Compaction ---
+  compactionEnabled ? true,
+  compactionReserveTokens ? 16384,
+  compactionKeepRecentTokens ? 20000,
 
-# --- Branch Summary ---
-, branchSummaryReserveTokens  ? 16384
-, branchSummarySkipPrompt     ? false
+  # --- Branch Summary ---
+  branchSummaryReserveTokens ? 16384,
+  branchSummarySkipPrompt ? false,
 
-# --- Retry ---
-, retryEnabled                ? true
-, retryMaxRetries             ? 10
-, retryBaseDelayMs            ? 2000
-, retryProviderTimeoutMs      ? 86400000
-, retryProviderMaxRetries     ? 10
-, retryProviderMaxRetryDelayMs ? 300000
+  # --- Retry ---
+  retryEnabled ? true,
+  retryMaxRetries ? 10,
+  retryBaseDelayMs ? 2000,
+  retryProviderTimeoutMs ? 86400000,
+  retryProviderMaxRetries ? 10,
+  retryProviderMaxRetryDelayMs ? 300000,
 
-# --- Message Delivery ---
-, steeringMode                ? "one-at-a-time"
-, followUpMode                ? "one-at-a-time"
-, transport                   ? "auto"       # "auto", "sse", "websocket", "websocket-cached"
-, httpIdleTimeoutMs           ? 300000
-, websocketConnectTimeoutMs   ? 15000
+  # --- Message Delivery ---
+  steeringMode ? "one-at-a-time",
+  followUpMode ? "one-at-a-time",
+  transport ? "auto", # "auto", "sse", "websocket", "websocket-cached"
+  httpIdleTimeoutMs ? 300000,
+  websocketConnectTimeoutMs ? 15000,
 
-# --- Terminal & Images ---
-, terminalShowImages          ? true
-, terminalImageWidthCells     ? 60
-, terminalClearOnShrink       ? false
-, imagesAutoResize            ? true
-, imagesBlockImages           ? false
+  # --- Terminal & Images ---
+  terminalShowImages ? true,
+  terminalImageWidthCells ? 60,
+  terminalClearOnShrink ? false,
+  imagesAutoResize ? true,
+  imagesBlockImages ? false,
 
-# --- Shell ---
-, shellPath                   ? null
-, shellCommandPrefix          ? null
-, npmCommand                  ? null
+  # --- Shell ---
+  shellPath ? null,
+  shellCommandPrefix ? null,
+  npmCommand ? null,
 
-# --- Sessions ---
-, sessionDir                  ? null
+  # --- Sessions ---
+  sessionDir ? null,
 
-# --- Model Cycling ---
-, enabledModels               ? null
+  # --- Model Cycling ---
+  enabledModels ? null,
 
-# --- Markdown ---
-, markdownCodeBlockIndent     ? "  "
+  # --- Markdown ---
+  markdownCodeBlockIndent ? "  ",
 
-# --- Resources ---
-, enableSkillCommands         ? true
-, extraExtensions             ? [ ]
-, extraSkills                 ? [ ]
-, extraPrompts                ? [ ]
-, extraThemes                 ? [ ]
+  # --- Resources ---
+  enableSkillCommands ? true,
+  extraExtensions ? [ ],
+  extraSkills ? [ ],
+  extraPrompts ? [ ],
+  extraThemes ? [ ],
 
-# --- Extensions (required) ---
-, gitExtensions
-, npmExtensionSrc
-, npmExtensionPkgJson
-, npmDepsHash
-, modelsJsonContent
-, keybindingsJsonContent
+  # --- Extensions (required) ---
+  gitExtensions,
+  npmExtensionSrc,
+  npmExtensionPkgJson,
+  npmDepsHash,
+  modelsJsonContent,
+  keybindingsJsonContent,
 }:
 
 let
@@ -123,7 +125,10 @@ let
     version = "0.0.0";
     src = npmExtensionSrc;
     npmDepsHash = npmDepsHash;
-    npmFlags = [ "--legacy-peer-deps" "--ignore-scripts" ];
+    npmFlags = [
+      "--legacy-peer-deps"
+      "--ignore-scripts"
+    ];
     npmrc = "legacy-peer-deps=true\nignore-scripts=true\n";
     npmInstallFlags = [ "--frozen-lockfile" ];
     dontNpmBuild = true;
@@ -131,7 +136,14 @@ let
 
   # ---- Combined extensions tree ----
   allExtensions = import ./extensions.nix {
-    inherit pkgs lib npmExtensions gitExtensions gitExtFetched extensionPackageNames;
+    inherit
+      pkgs
+      lib
+      npmExtensions
+      gitExtensions
+      gitExtFetched
+      extensionPackageNames
+      ;
   };
 
   # ---- Build settings JSON from all the tunables ----
@@ -223,8 +235,15 @@ let
 
   # ---- Wrapper script ----
   piWrapper = import ./wrapper.nix {
-    inherit pkgs basePi settingsJson allExtensions configStampValue
-            modelsJsonContent keybindingsJsonContent;
+    inherit
+      pkgs
+      basePi
+      settingsJson
+      allExtensions
+      configStampValue
+      modelsJsonContent
+      keybindingsJsonContent
+      ;
   };
 
 in
@@ -235,7 +254,10 @@ in
   };
   devShells = {
     default = pkgs.mkShell {
-      packages = [ pkgs.nodejs pkgs.nixfmt ];
+      packages = [
+        pkgs.nodejs
+        pkgs.nixfmt
+      ];
       shellHook = ''
         echo "Nix-Pi devShell — Node.js $(node --version) ready"
       '';

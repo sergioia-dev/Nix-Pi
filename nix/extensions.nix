@@ -1,4 +1,11 @@
-{ pkgs, lib, npmExtensions, gitExtensions, gitExtFetched, extensionPackageNames }:
+{
+  pkgs,
+  lib,
+  npmExtensions,
+  gitExtensions,
+  gitExtFetched,
+  extensionPackageNames,
+}:
 
 let
   npmExtensionsDir = "${npmExtensions}/lib/node_modules";
@@ -9,7 +16,8 @@ let
 
   gitCopyCommands = builtins.concatStringsSep "\n" (
     builtins.attrValues (
-      builtins.mapAttrs (spec: drv:
+      builtins.mapAttrs (
+        spec: drv:
         let
           rest = lib.removePrefix "git:" spec;
           parts = lib.splitString "/" rest;

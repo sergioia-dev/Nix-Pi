@@ -7,7 +7,8 @@
   #   extName "npm:@scope/name@1.0.0"        → "@scope/name"
   #   extName "git:github.com/owner/repo@r"  → "repo"
   # ==================================================================
-  extName = spec:
+  extName =
+    spec:
     let
       noPrefix = lib.removePrefix "npm:" (lib.removePrefix "git:github.com/" spec);
     in
@@ -25,7 +26,8 @@
   # ==================================================================
   # Parse "git:github.com/owner/repo@rev" and call fetchFromGitHub.
   # ==================================================================
-  fetchGitExt = spec: hash:
+  fetchGitExt =
+    spec: hash:
     let
       rest = lib.removePrefix "git:" spec;
       pathParts = lib.splitString "/" rest;
@@ -34,5 +36,12 @@
       rev = lib.elemAt (lib.splitString "@" repoRev) 1;
       repo = lib.elemAt (lib.splitString "@" repoRev) 0;
     in
-    pkgs.fetchFromGitHub { inherit owner repo rev hash; };
+    pkgs.fetchFromGitHub {
+      inherit
+        owner
+        repo
+        rev
+        hash
+        ;
+    };
 }
