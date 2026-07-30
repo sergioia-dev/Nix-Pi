@@ -113,7 +113,7 @@
 
         # --- Npm extension source (must contain package.json + package-lock.json) ---
         npmExtensionSrc = ./extensions;
-        npmDepsHash = "sha256-yXoBuX1jxEtDBpc7wCzpIkKEu7N0cvHq+3VnGaFL9rE=";
+        npmDepsHash = "sha256-YNrgd/6jjpovFpqrLFfKgH5Nus5j8q8AGBu2O9PA4yU=";
 
         # --- Config file contents (read at eval time) ---
         npmExtensionPkgJson = builtins.readFile ./extensions/package.json;
