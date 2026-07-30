@@ -14,7 +14,7 @@
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
-      import ./nix {
+      import ./nix rec {
         inherit system;
         pkgs = nixpkgs.legacyPackages.${system};
 
@@ -23,8 +23,8 @@
         # ================================================================
 
         # --- Model & Thinking ---
-        defaultProvider = "opencode";
-        defaultModel = "deepseek-v4-flash-free";
+        # defaultProvider = "opencode";
+        # defaultModel = "deepseek-v4-flash-free";
         # defaultThinkingLevel = null;    # null = pi default ("off")
         # hideThinkingBlock = false;
         # showCacheMissNotices = false;
@@ -113,7 +113,7 @@
 
         # --- Npm extension source (must contain package.json + package-lock.json) ---
         npmExtensionSrc = ./extensions;
-        npmDepsHash = "sha256-I+LPNiPW9XgKNcMasq3pkrzwQGitGHda4qwVN+VNpZk=";
+        npmDepsHash = "sha256-yXoBuX1jxEtDBpc7wCzpIkKEu7N0cvHq+3VnGaFL9rE=";
 
         # --- Config file contents (read at eval time) ---
         npmExtensionPkgJson = builtins.readFile ./extensions/package.json;

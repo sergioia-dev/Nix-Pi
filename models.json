@@ -2,12 +2,11 @@
   "providers": {
     "openrouter": {
       "apiKey": "$OPENROUTER_API_KEY"
-    }
-  },
-  "models": {
-    "openrouter/google/gemini-2.0-flash-exp:free": {
-      "provider": "openrouter",
-      "model": "google/gemini-2.0-flash-exp:free"
+    },
+    "opencode": {
+      "baseUrl": "https://opencode.ai/zen/v1",
+      "apiKey": "$OPENCODE_API_KEY",
+      "api": "openai-completions"
     }
   }
 }

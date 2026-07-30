@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
-    "opencode-pi": "1.1.2",
     "pi-vim": "0.14.1",
     "pi-nvim": "0.2.4",
     "pi-pixel-header": "1.0.2",
