@@ -12,54 +12,78 @@
       nixpkgs,
       flake-utils,
     }:
+    let
+      # ================================================================
+      # USER TUNABLES — edit these to customise your pi install
+      # ================================================================
+
+      # --- npm extensions (single source of truth) ---
+      # Each entry is "name" or "name@version". After editing, run
+      #   nix run .#add-npm-dep
+      # to regenerate extensions/package.json + extensions/package-lock.json.
+      npmExtensionSpecs = [
+        "pi-vim@0.14.1"
+        "pi-nvim@0.2.4"
+        "pi-pixel-header@1.0.2"
+        "pi-web-access@0.13.0"
+        "@juicesharp/rpiv-todo@2.1.0"
+        "pi-protected-paths@0.1.1"
+        "pi-loop-police@1.13.0"
+        "pi-adaptive-thinking@0.1.1"
+        "pi-open-agents@0.1.12"
+        "@tmustier/pi-usage-extension@0.9.4"
+        "@firstpick/pi-extension-nixos-wiki-local@0.1.6"
+        "pi-env-probe@0.1.3"
+        "pi-kilocode@0.1.2"
+        "pi-catppuccin-tui@0.1.3"
+        "pi-all-tools@1.0.5"
+      ];
+    in
     flake-utils.lib.eachDefaultSystem (
       system:
       import ./nix rec {
         inherit system;
         pkgs = nixpkgs.legacyPackages.${system};
-
-        # ================================================================
-        # USER TUNABLES — edit these to customise your pi install
-        # ================================================================
+        inherit npmExtensionSpecs;
 
         # --- Model & Thinking ---
-        # defaultProvider = "opencode";
-        # defaultModel = "deepseek-v4-flash-free";
-        # defaultThinkingLevel = null;    # null = pi default ("off")
-        # hideThinkingBlock = false;
-        # showCacheMissNotices = false;
-        # thinkingBudgets = null;          # null = pi default levels
+        defaultProvider = "opencode";
+        defaultModel = "deepseek-v4-flash-free";
+        defaultThinkingLevel = null; # null = pi default ("off")
+        hideThinkingBlock = true;
+        showCacheMissNotices = false;
+        thinkingBudgets = null; # null = pi default levels
 
         # --- UI & Display ---
-        theme = "catppuccin-mocha";
+        theme = "catppuccin-tui-mocha";
         externalEditor = null; # null = $VISUAL/$EDITOR/nano
-        # quietStartup = false;
+        quietStartup = false;
         defaultProjectTrust = "always";
-        # collapseChangelog = false;
-        # enableInstallTelemetry = true;
-        # enableAnalytics = false;
-        # trackingId = null;
-        # doubleEscapeAction = "tree";
-        # treeFilterMode = "default";
-        # editorPaddingX = 0;
-        # outputPad = 1;
-        # autocompleteMaxVisible = 5;
-        # showHardwareCursor = false;
+        collapseChangelog = false;
+        enableInstallTelemetry = true;
+        enableAnalytics = false;
+        trackingId = null;
+        doubleEscapeAction = "tree";
+        treeFilterMode = "default";
+        editorPaddingX = 0;
+        outputPad = 1;
+        autocompleteMaxVisible = 5;
+        showHardwareCursor = false;
 
         # --- Network ---
-        # httpProxy = null;                # e.g. "http://127.0.0.1:7890"
+        httpProxy = null; # e.g. "http://127.0.0.1:7890"
 
         # --- Warnings ---
-        # warningsAnthropicExtraUsage = true;
+        warningsAnthropicExtraUsage = true;
 
         # --- Compaction ---
-        # compactionEnabled = true;
-        # compactionReserveTokens = 16384;
-        # compactionKeepRecentTokens = 20000;
+        compactionEnabled = true;
+        compactionReserveTokens = 16384;
+        compactionKeepRecentTokens = 20000;
 
         # --- Branch Summary ---
-        # branchSummaryReserveTokens = 16384;
-        # branchSummarySkipPrompt = false;
+        branchSummaryReserveTokens = 16384;
+        branchSummarySkipPrompt = false;
 
         # --- Retry ---
         retryEnabled = true;
@@ -70,39 +94,39 @@
         retryProviderMaxRetryDelayMs = 300000;
 
         # --- Message Delivery ---
-        # steeringMode = "one-at-a-time";
-        # followUpMode = "one-at-a-time";
-        # transport = "auto";
-        # httpIdleTimeoutMs = 300000;
-        # websocketConnectTimeoutMs = 15000;
+        steeringMode = "one-at-a-time";
+        followUpMode = "one-at-a-time";
+        transport = "auto";
+        httpIdleTimeoutMs = 300000;
+        websocketConnectTimeoutMs = 15000;
 
         # --- Terminal & Images ---
-        # terminalShowImages = true;
-        # terminalImageWidthCells = 60;
-        # terminalClearOnShrink = false;
-        # imagesAutoResize = true;
-        # imagesBlockImages = false;
+        terminalShowImages = true;
+        terminalImageWidthCells = 60;
+        terminalClearOnShrink = false;
+        imagesAutoResize = true;
+        imagesBlockImages = false;
 
         # --- Shell ---
-        # shellPath = null;
-        # shellCommandPrefix = null;
-        # npmCommand = null;               # e.g. ["mise", "exec", "node@20", "--", "npm"]
+        shellPath = null;
+        shellCommandPrefix = null;
+        npmCommand = null; # e.g. ["mise", "exec", "node@20", "--", "npm"]
 
         # --- Sessions ---
-        # sessionDir = null;
+        sessionDir = null;
 
         # --- Model Cycling ---
-        # enabledModels = null;             # e.g. ["claude-*", "gpt-4o"]
+        enabledModels = null; # e.g. ["claude-*", "gpt-4o"]
 
         # --- Markdown ---
-        # markdownCodeBlockIndent = "  ";
+        markdownCodeBlockIndent = "  ";
 
         # --- Resources ---
-        # enableSkillCommands = true;
-        # extraExtensions = [ ];
-        # extraSkills = [ ];
-        # extraPrompts = [ ];
-        # extraThemes = [ ];
+        enableSkillCommands = true;
+        extraExtensions = [ ];
+        extraSkills = [ ];
+        extraPrompts = [ ];
+        extraThemes = [ ];
 
         # --- Git extensions ---
         #   format: "git:github.com/owner/repo@rev" = "sha256-...";
@@ -111,14 +135,18 @@
             "sha256-fcWsItMAEAonxtJfN2FU/9/TCtYBfeyiMJq0XEW9+to=";
         };
 
-        # --- Npm extension source (must contain package.json + package-lock.json) ---
+        # --- Npm extension source (must contain package-lock.json; package.json
+        #     is regenerated from npmExtensionSpecs by `nix run .#add-npm-dep`) ---
         npmExtensionSrc = ./extensions;
-        npmDepsHash = "sha256-YNrgd/6jjpovFpqrLFfKgH5Nus5j8q8AGBu2O9PA4yU=";
 
         # --- Config file contents (read at eval time) ---
-        npmExtensionPkgJson = builtins.readFile ./extensions/package.json;
         modelsJsonContent = builtins.readFile ./models.json;
         keybindingsJsonContent = builtins.readFile ./keybindings.json;
       }
-    );
+    )
+    // {
+      # Expose the specs as a top-level output so the add-npm-dep script can
+      # read them with `nix eval --json .#npmExtensionSpecs` (no build needed).
+      inherit npmExtensionSpecs;
+    };
 }

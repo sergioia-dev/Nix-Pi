@@ -8,7 +8,7 @@
 }:
 
 let
-  npmExtensionsDir = "${npmExtensions}/lib/node_modules";
+  npmExtensionsDir = "${npmExtensions}/node_modules";
 
   markerNamesFile = pkgs.writeText "marker-names" (
     builtins.concatStringsSep "\n" extensionPackageNames

@@ -92,8 +92,7 @@
   # --- Extensions (required) ---
   gitExtensions,
   npmExtensionSrc,
-  npmExtensionPkgJson,
-  npmDepsHash,
+  npmExtensionSpecs, # list of "name" or "name@version"
   modelsJsonContent,
   keybindingsJsonContent,
 }:
@@ -106,10 +105,68 @@ let
   utils = import ./utils.nix { inherit pkgs lib; };
 
   # ---- Npm extension metadata ----
-  extensionPkg = builtins.fromJSON npmExtensionPkgJson;
-  npmExtSpecs = builtins.map (name: "npm:${name}@${extensionPkg.dependencies.${name}}") (
-    builtins.attrNames extensionPkg.dependencies
-  );
+  # "pi-vim@0.14.1" -> { name = "pi-vim"; version = "0.14.1"; }
+  # "@scope/name@1.0.0" -> { name = "@scope/name"; version = "1.0.0"; }
+  # "pi-vim" -> { name = "pi-vim"; version = null; }
+  parseSpec =
+    spec:
+    let
+      parts = lib.splitString "@" spec;
+      isScoped = lib.hasPrefix "@" spec;
+    in
+    if isScoped then
+      {
+        name = "@${lib.elemAt parts 1}";
+        version = if builtins.length parts > 2 then lib.elemAt parts 2 else null;
+      }
+    else
+      {
+        name = lib.elemAt parts 0;
+        version = if builtins.length parts > 1 then lib.elemAt parts 1 else null;
+      };
+
+  npmExtSpecs = builtins.map (spec: "npm:${spec}") npmExtensionSpecs;
+
+  # package.json content generated at eval time from npmExtensionSpecs
+  packageJsonContent = builtins.toJSON {
+    name = "pi-extensions";
+    version = "0.0.0";
+    private = true;
+    dependencies = builtins.listToAttrs (
+      map (spec: {
+        name = (parseSpec spec).name;
+        value = (parseSpec spec).version or "latest";
+      }) npmExtensionSpecs
+    );
+  };
+
+  # ---- Sync guard: extensions/package-lock.json must match npmExtensionSpecs ----
+  lockfile = builtins.fromJSON (builtins.readFile (npmExtensionSrc + "/package-lock.json"));
+  lockfileRootDeps = lockfile.packages."".dependencies or { };
+
+  isExactVersion = v: builtins.match "[0-9]+\\.[0-9]+\\.[0-9]+" v != null;
+
+  specNamesSorted = lib.sort (a: b: a < b) (map (s: (parseSpec s).name) npmExtensionSpecs);
+  lockNamesSorted = lib.sort (a: b: a < b) (lib.attrNames lockfileRootDeps);
+  namesMatch = specNamesSorted == lockNamesSorted;
+
+  # Specs with an exact version must match the locked version; versionless
+  # specs and non-semver ranges are accepted as long as the name is present.
+  versionsMatch = builtins.all (
+    spec:
+    let
+      p = parseSpec spec;
+    in
+    p.version == null || !isExactVersion p.version || (lockfileRootDeps.${p.name} or null) == p.version
+  ) npmExtensionSpecs;
+
+  syncOk = namesMatch && versionsMatch;
+
+  syncError = ''
+    extensions/package-lock.json is out of sync with npmExtensionSpecs in flake.nix.
+    Run:  nix run .#add-npm-dep
+    Then: nix build .
+  '';
 
   # ---- Git extension metadata ----
   gitExtSpecs = builtins.attrNames gitExtensions;
@@ -119,19 +176,39 @@ let
   extensionSpecs = npmExtSpecs ++ gitExtSpecs;
   extensionPackageNames = builtins.map utils.extName extensionSpecs;
 
-  # ---- Build npm packages ----
-  npmExtensions = pkgs.buildNpmPackage {
-    pname = "pi-npm-extensions";
-    version = "0.0.0";
-    src = npmExtensionSrc;
-    npmDepsHash = npmDepsHash;
-    npmFlags = [
-      "--legacy-peer-deps"
-      "--ignore-scripts"
-    ];
-    npmrc = "legacy-peer-deps=true\nignore-scripts=true\n";
-    npmInstallFlags = [ "--frozen-lockfile" ];
-    dontNpmBuild = true;
+  # ---- Build npm packages (no hash needed: integrity comes from the lockfile) ----
+  npmExtensions =
+    if syncOk then
+      pkgs.importNpmLock.buildNodeModules {
+        npmRoot = npmExtensionSrc;
+        package = builtins.fromJSON packageJsonContent;
+        packageLock = lockfile;
+        nodejs = pkgs.nodejs;
+        derivationArgs = {
+          npmFlags = [ "--legacy-peer-deps" ];
+        };
+      }
+    else
+      throw syncError;
+
+  # ---- Tooling: add-npm-dep script + nix run apps ----
+  addNpmDep = pkgs.writeShellApplication {
+    name = "add-npm-dep";
+    runtimeInputs = [ pkgs.nix pkgs.nodejs ];
+    text = builtins.readFile ../add-npm-dep.sh;
+  };
+
+  syncAndBuild = pkgs.writeShellApplication {
+    name = "build";
+    runtimeInputs = [ pkgs.nix addNpmDep ];
+    text = ''
+      if [ ! -f flake.nix ]; then
+        echo "error: run from the flake root (no flake.nix in $(pwd))" >&2
+        exit 1
+      fi
+      add-npm-dep
+      exec nix build .
+    '';
   };
 
   # ---- Combined extensions tree ----
@@ -147,90 +224,119 @@ let
   };
 
   # ---- Build settings JSON from all the tunables ----
-  settingsJson = pkgs.writeText "settings.json" (
-    builtins.toJSON (
-      # Remove nulls so we don't write "null" into the JSON
-      lib.filterAttrsRecursive (_: v: v != null) {
-        inherit defaultProvider defaultModel theme;
-        defaultProjectTrust = defaultProjectTrust;
-        hideThinkingBlock = hideThinkingBlock;
-        showCacheMissNotices = showCacheMissNotices;
-        quietStartup = quietStartup;
-        collapseChangelog = collapseChangelog;
-        enableInstallTelemetry = enableInstallTelemetry;
-        enableAnalytics = enableAnalytics;
-        doubleEscapeAction = doubleEscapeAction;
-        treeFilterMode = treeFilterMode;
-        editorPaddingX = editorPaddingX;
-        outputPad = outputPad;
-        autocompleteMaxVisible = autocompleteMaxVisible;
-        showHardwareCursor = showHardwareCursor;
-        terminal = {
-          showImages = terminalShowImages;
-          imageWidthCells = terminalImageWidthCells;
-          clearOnShrink = terminalClearOnShrink;
-        };
-        images = {
-          autoResize = imagesAutoResize;
-          blockImages = imagesBlockImages;
-        };
-        markdown = {
-          codeBlockIndent = markdownCodeBlockIndent;
-        };
-        warnings = {
-          anthropicExtraUsage = warningsAnthropicExtraUsage;
-        };
-        compaction = {
-          enabled = compactionEnabled;
-          reserveTokens = compactionReserveTokens;
-          keepRecentTokens = compactionKeepRecentTokens;
-        };
-        branchSummary = {
-          reserveTokens = branchSummaryReserveTokens;
-          skipPrompt = branchSummarySkipPrompt;
-        };
-        retry = {
-          enabled = retryEnabled;
-          maxRetries = retryMaxRetries;
-          baseDelayMs = retryBaseDelayMs;
-          provider = {
-            timeoutMs = retryProviderTimeoutMs;
-            maxRetries = retryProviderMaxRetries;
-            maxRetryDelayMs = retryProviderMaxRetryDelayMs;
-          };
-        };
-        inherit steeringMode followUpMode transport;
-        httpIdleTimeoutMs = httpIdleTimeoutMs;
-        websocketConnectTimeoutMs = websocketConnectTimeoutMs;
-        inherit enableSkillCommands;
-        packages = extensionSpecs;
-      }
-      // lib.optionalAttrs (defaultThinkingLevel != null) { inherit defaultThinkingLevel; }
-      // lib.optionalAttrs (thinkingBudgets != null) { inherit thinkingBudgets; }
-      // lib.optionalAttrs (externalEditor != null) { inherit externalEditor; }
-      // lib.optionalAttrs (httpProxy != null) { inherit httpProxy; }
-      // lib.optionalAttrs (shellPath != null) { inherit shellPath; }
-      // lib.optionalAttrs (shellCommandPrefix != null) { inherit shellCommandPrefix; }
-      // lib.optionalAttrs (npmCommand != null) { inherit npmCommand; }
-      // lib.optionalAttrs (sessionDir != null) { inherit sessionDir; }
-      // lib.optionalAttrs (enabledModels != null) { inherit enabledModels; }
-      // lib.optionalAttrs (trackingId != null) { inherit trackingId; }
-      // lib.optionalAttrs (extraExtensions != [ ]) { extensions = extraExtensions; }
-      // lib.optionalAttrs (extraSkills != [ ]) { skills = extraSkills; }
-      // lib.optionalAttrs (extraPrompts != [ ]) { prompts = extraPrompts; }
-      // lib.optionalAttrs (extraThemes != [ ]) { themes = extraThemes; }
-    )
-  );
+  # All options are included here -- null where unset -- so you can verify
+  # every setting in flake.nix is wired through to the generated JSON.
+  # Pi treats null the same as an absent attribute for all settings EXCEPT
+  # enabledModels (crashes on null in interactive mode), so that is
+  # normalized to [] below.
+  settingsJsonContent = builtins.toJSON {
+    # --- Model & Thinking ---
+    inherit defaultProvider defaultModel theme;
+    defaultThinkingLevel = defaultThinkingLevel;
+    hideThinkingBlock = hideThinkingBlock;
+    showCacheMissNotices = showCacheMissNotices;
+    thinkingBudgets = thinkingBudgets;
+
+    # --- UI & Display ---
+    quietStartup = quietStartup;
+    defaultProjectTrust = defaultProjectTrust;
+    collapseChangelog = collapseChangelog;
+    enableInstallTelemetry = enableInstallTelemetry;
+    enableAnalytics = enableAnalytics;
+    trackingId = trackingId;
+    doubleEscapeAction = doubleEscapeAction;
+    treeFilterMode = treeFilterMode;
+    editorPaddingX = editorPaddingX;
+    outputPad = outputPad;
+    autocompleteMaxVisible = autocompleteMaxVisible;
+    showHardwareCursor = showHardwareCursor;
+    externalEditor = externalEditor;
+
+    # --- Network ---
+    httpProxy = httpProxy;
+
+    # --- Warnings ---
+    warnings = {
+      anthropicExtraUsage = warningsAnthropicExtraUsage;
+    };
+
+    # --- Compaction ---
+    compaction = {
+      enabled = compactionEnabled;
+      reserveTokens = compactionReserveTokens;
+      keepRecentTokens = compactionKeepRecentTokens;
+    };
+
+    # --- Branch Summary ---
+    branchSummary = {
+      reserveTokens = branchSummaryReserveTokens;
+      skipPrompt = branchSummarySkipPrompt;
+    };
+
+    # --- Retry ---
+    retry = {
+      enabled = retryEnabled;
+      maxRetries = retryMaxRetries;
+      baseDelayMs = retryBaseDelayMs;
+      provider = {
+        timeoutMs = retryProviderTimeoutMs;
+        maxRetries = retryProviderMaxRetries;
+        maxRetryDelayMs = retryProviderMaxRetryDelayMs;
+      };
+    };
+
+    # --- Message Delivery ---
+    inherit steeringMode followUpMode transport;
+    httpIdleTimeoutMs = httpIdleTimeoutMs;
+    websocketConnectTimeoutMs = websocketConnectTimeoutMs;
+
+    # --- Shell ---
+    shellPath = shellPath;
+    shellCommandPrefix = shellCommandPrefix;
+    npmCommand = npmCommand;
+
+    # --- Sessions ---
+    sessionDir = sessionDir;
+
+    # --- Model Cycling ---
+    # null is NOT safe for pi -- interactive mode crashes on null.length.
+    # Normalize null -> [] (empty list behaves identically to unset)
+    enabledModels = if enabledModels != null then enabledModels else [ ];
+
+    # --- Terminal & Images ---
+    terminal = {
+      showImages = terminalShowImages;
+      imageWidthCells = terminalImageWidthCells;
+      clearOnShrink = terminalClearOnShrink;
+    };
+    images = {
+      autoResize = imagesAutoResize;
+      blockImages = imagesBlockImages;
+    };
+
+    # --- Markdown ---
+    markdown = {
+      codeBlockIndent = markdownCodeBlockIndent;
+    };
+
+    # --- Resources ---
+    packages = extensionSpecs;
+    inherit enableSkillCommands;
+    extensions = extraExtensions;
+    skills = extraSkills;
+    prompts = extraPrompts;
+    themes = extraThemes;
+  };
+
+  settingsJson = pkgs.writeText "settings.json" settingsJsonContent;
 
   # ---- Config stamp ----
+  # Hash the full settings JSON + models + keybindings so ANY setting
+  # change triggers a runtime config reinstall.
   configStampValue = builtins.hashString "sha256" (
-    modelsJsonContent
+    settingsJsonContent
+    + modelsJsonContent
     + keybindingsJsonContent
-    + builtins.concatStringsSep "\n" extensionSpecs
-    + builtins.toJSON defaultProvider
-    + builtins.toJSON defaultModel
-    + builtins.toJSON theme
-    + builtins.toJSON defaultProjectTrust
   );
 
   # ---- Wrapper script ----
@@ -251,6 +357,20 @@ in
   packages = {
     default = piWrapper;
     pi = piWrapper;
+  };
+  apps = {
+    default = {
+      type = "app";
+      program = "${addNpmDep}/bin/add-npm-dep";
+    };
+    add-npm-dep = {
+      type = "app";
+      program = "${addNpmDep}/bin/add-npm-dep";
+    };
+    build = {
+      type = "app";
+      program = "${syncAndBuild}/bin/build";
+    };
   };
   devShells = {
     default = pkgs.mkShell {

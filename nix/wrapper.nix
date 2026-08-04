@@ -74,8 +74,11 @@ pkgs.writeShellScriptBin "pi" ''
     mkdir -p "$PI_NPM_DIR"
     NPM_TARGET="${allExtensions}/node_modules"
     CURRENT="$(test -L "$PI_NPM_DIR/node_modules" && readlink "$PI_NPM_DIR/node_modules" || true)"
+    # Replace any stale symlink, real (npm-installed) dir, or GC'd target with
+    # the store-backed symlink so pi uses the pre-built packages offline.
     if [ "$CURRENT" != "$NPM_TARGET" ] || { [ -n "$CURRENT" ] && ! test -e "$CURRENT"; }; then
-      ln -sfn "$NPM_TARGET" "$PI_NPM_DIR/node_modules"
+      rm -rf "$PI_NPM_DIR/node_modules"
+      ln -s "$NPM_TARGET" "$PI_NPM_DIR/node_modules"
     fi
 
     # ---- Git extensions (generic walk of all subdirs) ----
