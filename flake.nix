@@ -24,19 +24,22 @@
       npmExtensionSpecs = [
         "pi-vim@0.14.1"
         "pi-nvim@0.2.4"
+        "pi-catppuccin-tui@0.1.3"
+        "@nguyenquangthai/pi-todo@0.6.0"
         "pi-pixel-header@1.0.2"
         "pi-web-access@0.13.0"
-        "@juicesharp/rpiv-todo@2.1.0"
-        "pi-protected-paths@0.1.1"
+        "@gotgenes/pi-permission-system@24.0.0"
         "pi-loop-police@1.13.0"
         "pi-adaptive-thinking@0.1.1"
         "pi-open-agents@0.1.12"
-        "@tmustier/pi-usage-extension@0.9.4"
         "@firstpick/pi-extension-nixos-wiki-local@0.1.6"
         "pi-env-probe@0.1.3"
         "pi-kilocode@0.1.2"
-        "pi-catppuccin-tui@0.1.3"
         "pi-all-tools@1.0.5"
+        "pi-hashline-edit-pro@1.0.7"
+        "pi-simplify@0.2.3"
+        "pi-hermes-memory@0.9.2"
+        "@narumitw/pi-plan-mode@0.49.3"
       ];
     in
     flake-utils.lib.eachDefaultSystem (
@@ -60,12 +63,12 @@
         quietStartup = false;
         defaultProjectTrust = "always";
         collapseChangelog = false;
-        enableInstallTelemetry = true;
+        enableInstallTelemetry = false;
         enableAnalytics = false;
         trackingId = null;
         doubleEscapeAction = "tree";
         treeFilterMode = "default";
-        editorPaddingX = 0;
+        editorPaddingX = 3;
         outputPad = 1;
         autocompleteMaxVisible = 5;
         showHardwareCursor = false;
@@ -131,8 +134,8 @@
         # --- Git extensions ---
         #   format: "git:github.com/owner/repo@rev" = "sha256-...";
         gitExtensions = {
-          "git:github.com/bwks/pi-planner@f8b0495d28f8bbb39bcb9efa5879a8b71f52bc30" =
-            "sha256-fcWsItMAEAonxtJfN2FU/9/TCtYBfeyiMJq0XEW9+to=";
+          # "git:github.com/bwks/pi-planner@f8b0495d28f8bbb39bcb9efa5879a8b71f52bc30" =
+          #   "sha256-fcWsItMAEAonxtJfN2FU/9/TCtYBfeyiMJq0XEW9+to=";
         };
 
         # --- Npm extension source (must contain package-lock.json; package.json

@@ -3,5 +3,7 @@
   "tui.select.down": ["down", "ctrl+n"],
   "tui.input.tab": [],
   "app.model.cycleForward": [],
-  "app.model.cycleBackward": []
+  "app.model.cycleBackward": [],
+  "app.clear" : [],
+  "app.interrupt" : ["ctrl+c"]
 }
