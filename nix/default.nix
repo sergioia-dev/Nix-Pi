@@ -88,18 +88,33 @@
   extraSkills ? [ ],
   extraPrompts ? [ ],
   extraThemes ? [ ],
-
   # --- Extensions (required) ---
   gitExtensions,
   npmExtensionSrc,
   npmExtensionSpecs, # list of "name" or "name@version"
   modelsJsonContent,
   keybindingsJsonContent,
+
 }:
 
 let
+
   inherit (pkgs) lib;
   basePi = pkgs.pi-coding-agent;
+
+  # ---- ai-skills source (declarative fetch with submodules) ----
+  # The hash covers the gitlab repo + submodule commits. After changing
+  # `rev`, run `nix build .` once with `hash = lib.fakeHash` and replace
+  # it with the printed `got: sha256-…` value.
+  aiSkillsSrc = pkgs.fetchFromGitLab {
+
+    owner = "sergioia-dev";
+    repo = "ai-skills";
+    rev = "e8c81ed95efff1e83245d0dd92beefdeb537d963";
+    hash = "sha256-OdLunaZ3xCa1Uo/A2mqLHspMWH0zUiUDDhgAOc9qZoc=";
+
+    fetchSubmodules = true;
+  };
 
   # ---- Helpers ----
   utils = import ./utils.nix { inherit pkgs lib; };
@@ -194,13 +209,19 @@ let
   # ---- Tooling: add-npm-dep script + nix run apps ----
   addNpmDep = pkgs.writeShellApplication {
     name = "add-npm-dep";
-    runtimeInputs = [ pkgs.nix pkgs.nodejs ];
+    runtimeInputs = [
+      pkgs.nix
+      pkgs.nodejs
+    ];
     text = builtins.readFile ../add-npm-dep.sh;
   };
 
   syncAndBuild = pkgs.writeShellApplication {
     name = "build";
-    runtimeInputs = [ pkgs.nix addNpmDep ];
+    runtimeInputs = [
+      pkgs.nix
+      addNpmDep
+    ];
     text = ''
       if [ ! -f flake.nix ]; then
         echo "error: run from the flake root (no flake.nix in $(pwd))" >&2
@@ -323,7 +344,8 @@ let
     packages = extensionSpecs;
     inherit enableSkillCommands;
     extensions = extraExtensions;
-    skills = extraSkills;
+    skills = [ "${aiSkillsSrc}" ] ++ extraSkills;
+
     prompts = extraPrompts;
     themes = extraThemes;
   };
@@ -331,16 +353,16 @@ let
   settingsJson = pkgs.writeText "settings.json" settingsJsonContent;
 
   # ---- Config stamp ----
-  # Hash the full settings JSON + models + keybindings so ANY setting
-  # change triggers a runtime config reinstall.
+  # Hash the full settings JSON + models + keybindings + ai-skills store
+  # path so ANY setting change or skills-tree update triggers a runtime
+  # config reinstall.
   configStampValue = builtins.hashString "sha256" (
-    settingsJsonContent
-    + modelsJsonContent
-    + keybindingsJsonContent
+    settingsJsonContent + modelsJsonContent + keybindingsJsonContent + "${aiSkillsSrc}"
   );
 
   # ---- Wrapper script ----
   piWrapper = import ./wrapper.nix {
+
     inherit
       pkgs
       basePi
@@ -349,6 +371,7 @@ let
       configStampValue
       modelsJsonContent
       keybindingsJsonContent
+      aiSkillsSrc
       ;
   };
 

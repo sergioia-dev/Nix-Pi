@@ -4,7 +4,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    self.submodules = true;
   };
 
   outputs =
@@ -15,6 +14,7 @@
     }:
     let
       # ================================================================
+
       # USER TUNABLES — edit these to customise your pi install
       # ================================================================
 
