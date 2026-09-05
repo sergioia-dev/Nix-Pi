@@ -22,24 +22,21 @@
       #   nix run .#add-npm-dep
       # to regenerate extensions/package.json + extensions/package-lock.json.
       npmExtensionSpecs = [
-        "pi-vim@0.14.1"
-        "pi-nvim@0.2.4"
+        "pi-vim@0.14.2"
+        "pi-nvim@0.2.5"
         "pi-catppuccin-tui@0.1.3"
-        "@nguyenquangthai/pi-todo@0.6.0"
+        "@nguyenquangthai/pi-todo@0.6.3"
         "pi-pixel-header@1.0.2"
-        "pi-web-access@0.13.0"
-        "@gotgenes/pi-permission-system@24.0.0"
-        "pi-loop-police@1.13.0"
-        "pi-adaptive-thinking@0.1.1"
-        "pi-open-agents@0.1.12"
-        "@firstpick/pi-extension-nixos-wiki-local@0.1.6"
-        "pi-env-probe@0.1.3"
+        "pi-web-access@0.27.0"
+        "@gotgenes/pi-permission-system@31.1.0"
+        "pi-loop-police@1.14.1"
+        "@firstpick/pi-extension-nixos-wiki-local@0.1.7"
+        "pi-env-probe@0.1.5"
         "pi-kilocode@0.1.2"
-        "pi-all-tools@1.0.5"
-        "pi-hashline-edit-pro@1.0.7"
+        "pi-hashline-edit-pro@3.0.2"
         "pi-simplify@0.2.3"
-        "pi-hermes-memory@0.9.2"
-        "@narumitw/pi-plan-mode@0.49.3"
+        "pi-hermes-memory@0.9.7"
+        "@narumitw/pi-plan-mode@0.56.0"
       ];
     in
     flake-utils.lib.eachDefaultSystem (
@@ -134,8 +131,6 @@
         # --- Git extensions ---
         #   format: "git:github.com/owner/repo@rev" = "sha256-...";
         gitExtensions = {
-          # "git:github.com/bwks/pi-planner@f8b0495d28f8bbb39bcb9efa5879a8b71f52bc30" =
-          #   "sha256-fcWsItMAEAonxtJfN2FU/9/TCtYBfeyiMJq0XEW9+to=";
         };
 
         # --- Npm extension source (must contain package-lock.json; package.json

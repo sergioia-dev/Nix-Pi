@@ -67,6 +67,30 @@ Everything lives under `nix/` — the flake delegates all logic to these modules
 
 ## All settings
 
+## Extensions (required)
+
+| Setting | Type | Description |
+
+|---------|------|-------------|
+
+| gitExtensions | attrset | Git extension specs: "git:github.com/owner/repo@rev" = "sha256-..." |
+
+| npmExtensionSrc | path | Path to extensions/ directory containing package.json + package-lock.json |
+
+| npmExtensionPkgJson | string (content) | builtins.readFile ./extensions/package.json |
+
+| modelsJsonContent | string (content) | builtins.readFile ./models.json |
+
+| keybindingsJsonContent | string (content) | builtins.readFile ./keybindings.json |
+
+| extraExtensions | array | Additional local extension paths or directories |
+
+| extraSkills | array | Additional local skill paths or directories |
+
+| enableSkillCommands | boolean | Register skills as /skill:name commands |
+
+
+
 Every Pi setting from the [official documentation](https://pi.dev/docs/latest/settings)
 is available as a tunable in `flake.nix`. Commented-out values represent the
 defaults.
