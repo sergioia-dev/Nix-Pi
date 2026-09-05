@@ -1,0 +1,3 @@
+[submodule "ai-skills"]
+	path = ai-skills
+	url = https://gitlab.com/sergioia-dev/ai-skills
